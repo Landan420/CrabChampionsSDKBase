@@ -1,0 +1,698 @@
+#include <pch.h>
+#include <Engine.h>
+#include <Menu.h>
+#include "SDK.h"
+#include "helper.h"
+
+using namespace SDK; // <-- makes UWorld, UPlayer, ACrabPS, etc. visible
+
+namespace DX11Base
+{
+    // Global variable for player scale slider
+    float g_overridePlayerScale = 1.0f;
+
+    namespace Styles
+    {
+        void BaseStyle()
+        {
+            ImGuiStyle& style = ImGui::GetStyle();
+            ImVec4* colors = ImGui::GetStyle().Colors;
+
+            style.WindowTitleAlign = ImVec2(0.5f, 0.5f);
+            ImGui::StyleColorsDark();
+        }
+
+        void SetNavigationMenuViewState(bool bShow)
+        {
+            ImVec4* colors = ImGui::GetStyle().Colors;
+            if (bShow)
+            {
+                colors[ImGuiCol_Text] = ImVec4(1.f, 1.f, 1.f, 1.f);
+                colors[ImGuiCol_WindowBg] = ImVec4(0.06f, 0.06f, 0.06f, 0.94f);
+                colors[ImGuiCol_Border] = ImVec4(0.43f, 0.43f, 0.50f, 0.50f);
+                colors[ImGuiCol_NavHighlight] = ImVec4(0.26f, 0.59f, 0.98f, 1.f);
+            }
+            else
+            {
+                for (int i = 0; i < ImGuiCol_COUNT; ++i)
+                    colors[i] = ImVec4(0.f, 0.f, 0.f, 0.f);
+            }
+        }
+    }
+
+    // ------------------------------
+    // Draw and Loops
+    // ------------------------------
+
+    void Menu::Draw()
+    {
+        if (g_Engine->bShowMenu)
+            MainMenu();
+
+        if (g_Engine->bShowHUD)
+            HUD();
+    }
+
+    void DX11Base::Menu::Loops()
+    {
+        if (!g_Engine)
+            return;
+
+        if (!g_Engine->pWorld)
+        {
+            uintptr_t moduleBase = (uintptr_t)GetModuleHandle(L"CrabChampions-Win64-Shipping.exe");
+            if (!moduleBase)
+                moduleBase = (uintptr_t)GetModuleHandle(nullptr);
+
+            __try
+            {
+                g_Engine->pWorld = *reinterpret_cast<SDK::UWorld**>(moduleBase + ::Offsets::GWorld);
+            }
+            __except (EXCEPTION_EXECUTE_HANDLER)
+            {
+                g_Engine->pWorld = nullptr;
+            }
+
+            if (!g_Engine->pWorld)
+                return;
+        }
+
+        SDK::UGameInstance* gi = nullptr;
+        __try { gi = g_Engine->pWorld->OwningGameInstance; }
+        __except (EXCEPTION_EXECUTE_HANDLER) { gi = nullptr; }
+
+        if (!gi || gi->LocalPlayers.Num() == 0)
+            return;
+
+        SDK::ACrabC* playerPawn = nullptr;
+        __try
+        {
+            SDK::APawn* pawn = gi->LocalPlayers[0]->PlayerController->AcknowledgedPawn;
+            playerPawn = static_cast<SDK::ACrabC*>(pawn);
+        }
+        __except (EXCEPTION_EXECUTE_HANDLER)
+        {
+            playerPawn = nullptr;
+        }
+
+        if (!playerPawn || !playerPawn->HC)
+            return;
+
+        SDK::ACrabPlayerC* player = static_cast<SDK::ACrabPlayerC*>(playerPawn);
+
+        // -----------------------------
+        // GODMODE
+        // -----------------------------
+        if (g_Engine->bGodMode)
+        {
+            __try
+            {
+                playerPawn->HC->HealthInfo.CurrentHealth = playerPawn->HC->HealthInfo.CurrentMaxHealth;
+                playerPawn->HC->HealthInfo.PreviousHealth = playerPawn->HC->HealthInfo.CurrentMaxHealth;
+            }
+            __except (EXCEPTION_EXECUTE_HANDLER) {}
+        }
+
+        // -----------------------------
+        // Infinite Ammo / No Reload
+        // -----------------------------
+        if (g_Engine->bInfiniteAmmo || g_Engine->bNoReload)
+        {
+            __try
+            {
+                TArray<SDK::ACrabWeapon*> weapons = *(TArray<SDK::ACrabWeapon*>*)((uintptr_t)playerPawn + 0x538);
+                int32_t count = weapons.Num();
+
+                for (int i = 0; i < count; i++)
+                {
+                    SDK::ACrabWeapon* weap = nullptr;
+                    __try { weap = weapons[i]; }
+                    __except (EXCEPTION_EXECUTE_HANDLER) { weap = nullptr; }
+                    if (!weap) continue;
+
+                    SDK::UCrabWeaponDA* weaponDA = nullptr;
+                    __try { weaponDA = weap->WeaponDA; }
+                    __except (EXCEPTION_EXECUTE_HANDLER) { weaponDA = nullptr; }
+                    if (!weaponDA) continue;
+
+                    __try
+                    {
+                        if (g_Engine->bInfiniteAmmo)
+                            weaponDA->bInfiniteClipSize = true;
+
+                        if (g_Engine->bNoReload)
+                            weaponDA->ReloadDuration = 0.f;
+                    }
+                    __except (EXCEPTION_EXECUTE_HANDLER) {}
+                }
+            }
+            __except (EXCEPTION_EXECUTE_HANDLER) {}
+        }
+
+        // -----------------------------
+        // Optional: No Cooldowns
+        // -----------------------------
+        if (g_Engine->bNoCooldowns)
+        {
+            if (!playerPawn || !playerPawn->PlayerState)
+                return;
+
+            SDK::ACrabPS* ps = static_cast<SDK::ACrabPS*>(playerPawn->PlayerState);
+
+            __try
+            {
+                if (ps->AbilityDA)
+                    ps->AbilityDA->Cooldown = 0.f;
+            }
+            __except (EXCEPTION_EXECUTE_HANDLER) {}
+
+            __try
+            {
+                if (ps->MeleeDA)
+                    ps->MeleeDA->Cooldown = 0.f;
+            }
+            __except (EXCEPTION_EXECUTE_HANDLER) {}
+        }
+
+        // -----------------------------
+        // Apply Player Scale Every Frame (Persistent)
+        // -----------------------------
+        SDK::USceneComponent* rootComp = nullptr;
+        __try { rootComp = playerPawn->RootComponent; }
+        __except (EXCEPTION_EXECUTE_HANDLER) { rootComp = nullptr; }
+
+        if (rootComp)
+        {
+            __try
+            {
+                SDK::FVector* scale = reinterpret_cast<SDK::FVector*>(uintptr_t(rootComp) + 0x134);
+                *scale = SDK::FVector{ g_overridePlayerScale, g_overridePlayerScale, g_overridePlayerScale };
+            }
+            __except (EXCEPTION_EXECUTE_HANDLER) {}
+        }
+
+        // -----------------------------
+        // No Spread / Zero Recoil
+        // -----------------------------
+        if (g_Engine->g_bNoSpread)
+        {
+            TArray<SDK::ACrabWeapon*> weapons = *(TArray<SDK::ACrabWeapon*>*)((uintptr_t)playerPawn + 0x538);
+            int32_t count = weapons.Num();
+
+            for (int i = 0; i < count; i++)
+            {
+                SDK::ACrabWeapon* weap = nullptr;
+                __try { weap = weapons[i]; }
+                __except (EXCEPTION_EXECUTE_HANDLER) { weap = nullptr; }
+                if (!weap) continue;
+
+                SDK::UCrabWeaponDA* weaponDA = nullptr;
+                __try { weaponDA = weap->WeaponDA; }
+                __except (EXCEPTION_EXECUTE_HANDLER) { weaponDA = nullptr; }
+                if (!weaponDA) continue;
+
+                __try
+                {
+                    weaponDA->BaseSpread = 0.f;
+                    weaponDA->FiringSpreadIncrement = 0.f;
+                    weaponDA->MaxSpread = 0.f;
+                    weaponDA->SpreadRecovery = 0.f;
+                    weaponDA->AimingSpreadMultiplier = 0.f;
+                    weaponDA->VerticalRecoil = 0.f;
+                    weaponDA->HorizontalRecoil = 0.f;
+                    weaponDA->RecoilInterpSpeed = 0.f;
+                    weaponDA->RecoilRecoveryInterpSpeed = 0.f;
+                }
+                __except (EXCEPTION_EXECUTE_HANDLER) {}
+            }
+        }
+    }
+
+    // ------------------------------
+    // Main menu
+    // ------------------------------
+    void DX11Base::Menu::MainMenu()
+    {
+        Styles::BaseStyle();
+        ImGui::SetNextWindowSize(ImVec2(500, 400), ImGuiCond_FirstUseEver);
+
+        if (!ImGui::Begin("Crab Champions 0.1", &g_Engine->bShowMenu,
+            ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_AlwaysAutoResize))
+        {
+            ImGui::End();
+            return;
+        }
+
+        if (ImGui::Button("UNHOOK DLL", ImVec2(ImGui::GetContentRegionAvail().x, 25)))
+            g_KillSwitch = TRUE;
+
+        if (ImGui::Button("DUMP OFFSETS", ImVec2(ImGui::GetContentRegionAvail().x, 25)))
+            DumpLocalPlayerOffsets();
+
+        ImGui::Spacing();
+        ImGui::Checkbox("Show Player HUD", &g_Engine->bShowHUD);
+
+        ImGui::Checkbox("Godmode", &g_Engine->bGodMode);
+        ImGui::Checkbox("Infinite Ammo", &g_Engine->bInfiniteAmmo);
+        ImGui::Checkbox("No Reload", &g_Engine->bNoReload);
+        ImGui::Checkbox("No Cooldowns", &g_Engine->bNoCooldowns);
+        ImGui::Checkbox("No Spread", &g_Engine->g_bNoSpread);
+
+
+        if (ImGui::CollapsingHeader("Player Info Overrides"))
+        {
+            if (!g_Engine || !g_Engine->pWorld)
+                return;
+
+            SDK::ACrabC* playerPawn = nullptr;
+            __try
+            {
+                SDK::APawn* pawn = g_Engine->pWorld->OwningGameInstance->LocalPlayers[0]->PlayerController->AcknowledgedPawn;
+                playerPawn = static_cast<SDK::ACrabC*>(pawn);
+            }
+            __except (EXCEPTION_EXECUTE_HANDLER) { playerPawn = nullptr; }
+
+            if (!playerPawn || !playerPawn->PlayerState)
+            {
+                ImGui::TextColored(ImVec4(1.f, 0.f, 0.f, 1.f), "PlayerState not valid");
+                return;
+            }
+
+            SDK::ACrabPS* ps = static_cast<SDK::ACrabPS*>(playerPawn->PlayerState);
+            SDK::ACrabPlayerC* player = static_cast<SDK::ACrabPlayerC*>(playerPawn);
+
+            if (ImGui::BeginTabBar("PlayerTabs"))
+            {
+                if (ImGui::BeginTabItem("Stats"))
+                {
+                    static int overrideRank = static_cast<int>(ps->AccountRank);
+                    const char* rankNames[] = { "None", "Bronze", "Silver", "Gold", "Sapphire", "Emerald", "Ruby", "Diamond" };
+                    if (ImGui::Combo("Override Rank", &overrideRank, rankNames, IM_ARRAYSIZE(rankNames)))
+                        ps->AccountRank = static_cast<SDK::ECrabRank>(overrideRank);
+
+                    static int overrideLevel = ps->AccountLevel;
+                    if (ImGui::SliderInt("Override Level", &overrideLevel, 1, 100))
+                        ps->AccountLevel = overrideLevel;
+
+                    static int overrideKeys = ps->Keys;
+                    if (ImGui::SliderInt("Override Keys", &overrideKeys, 0, 999))
+                        ps->Keys = overrideKeys;
+
+                    static int overrideCrystals = ps->Crystals;
+                    if (ImGui::SliderInt("Override Crystals", &overrideCrystals, 0, 9999))
+                        ps->Crystals = overrideCrystals;
+
+                    ImGui::EndTabItem();
+                }
+
+                if (ImGui::BeginTabItem("Movement"))
+                {
+                    static float overrideWalkSpeed = playerPawn->BaseWalkSpeed;
+                    if (ImGui::SliderFloat("Base Walk Speed", &overrideWalkSpeed, 0.f, 3000.f))
+                        playerPawn->BaseWalkSpeed = overrideWalkSpeed;
+
+                    static float overrideAirControl = playerPawn->AirControl;
+                    if (ImGui::SliderFloat("Air Control", &overrideAirControl, 0.f, 5.f))
+                        playerPawn->AirControl = overrideAirControl;
+
+                    static float overrideFriction = playerPawn->GroundFriction;
+                    if (ImGui::SliderFloat("Ground Friction", &overrideFriction, 0.f, 10.f))
+                        playerPawn->GroundFriction = overrideFriction;
+
+                    static float overrideFlipHeight = player->FlipHeight;
+                    if (ImGui::SliderFloat("Flip Height", &overrideFlipHeight, 0.f, 3000.f))
+                        player->FlipHeight = overrideFlipHeight;
+
+                    static float overrideDashHeight = player->DashHeight;
+                    if (ImGui::SliderFloat("Dash Height", &overrideDashHeight, 0.f, 3000.f))
+                        player->DashHeight = overrideDashHeight;
+
+                    static float overrideAcceleration = playerPawn->MaxAcceleration;
+                    if (ImGui::SliderFloat("Max Acceleration", &overrideAcceleration, 0.f, 5000.f))
+                        playerPawn->MaxAcceleration = overrideAcceleration;
+
+                    static float overrideDashCooldown = player->BaseDashCooldown;
+                    if (ImGui::SliderFloat("Dash Cooldown", &overrideDashCooldown, 0.f, 10.f))
+                        player->BaseDashCooldown = overrideDashCooldown;
+
+                    ImGui::SliderFloat("Player Scale", &g_overridePlayerScale, 0.1f, 5.f);
+
+                    ImGui::EndTabItem();
+                }
+
+                if (ImGui::BeginTabItem("Combat"))
+                {
+                    static float overrideDamageMultiplier = ps->DamageMultiplier;
+                    if (ImGui::SliderFloat("Damage Multiplier", &overrideDamageMultiplier, 0.f, 10.f))
+                        ps->DamageMultiplier = overrideDamageMultiplier;
+
+                    static float overrideHealthMultiplier = ps->MaxHealthMultiplier;
+                    if (ImGui::SliderFloat("Health Multiplier", &overrideHealthMultiplier, 0.f, 10.f))
+                        ps->MaxHealthMultiplier = overrideHealthMultiplier;
+                    if (ps->WeaponDA)
+                    {
+                        static float overrideFireRate = ps->WeaponDA->BaseFireRate;
+                        if (ImGui::SliderFloat("Fire Rate", &overrideFireRate, 0.01f, 10.f))
+                            ps->WeaponDA->BaseFireRate = overrideFireRate;
+
+                        static float overrideVerticalRecoil = ps->WeaponDA->VerticalRecoil;
+                        if (ImGui::SliderFloat("Vertical Recoil", &overrideVerticalRecoil, 0.f, 50.f))
+                            ps->WeaponDA->VerticalRecoil = overrideVerticalRecoil;
+
+                        static float overrideHorizontalRecoil = ps->WeaponDA->HorizontalRecoil;
+                        if (ImGui::SliderFloat("Horizontal Recoil", &overrideHorizontalRecoil, 0.f, 50.f))
+                            ps->WeaponDA->HorizontalRecoil = overrideHorizontalRecoil;
+
+                        static float overrideRecoilInterp = ps->WeaponDA->RecoilInterpSpeed;
+                        if (ImGui::SliderFloat("Recoil Interp Speed", &overrideRecoilInterp, 0.f, 50.f))
+                            ps->WeaponDA->RecoilInterpSpeed = overrideRecoilInterp;
+
+                        static float overrideRecoveryInterp = ps->WeaponDA->RecoilRecoveryInterpSpeed;
+                        if (ImGui::SliderFloat("Recoil Recovery Speed", &overrideRecoveryInterp, 0.f, 50.f))
+                            ps->WeaponDA->RecoilRecoveryInterpSpeed = overrideRecoveryInterp;
+
+                        // --------- NEW: Melee Range Slider ----------
+                        if (ps->MeleeDA)
+                        {
+                            static float meleeRange = ps->MeleeDA->Range;
+                            if (ImGui::SliderFloat("Melee Range", &meleeRange, 50.f, 2000.f))
+                            {
+                                // Apply immediately
+                                ps->MeleeDA->Range = meleeRange;
+                            }
+                        }
+                        // --------- NEW: Melee DMG Slider ----------
+                        if (ps->MeleeDA)
+                        {
+                            static float meleeDamage = ps->MeleeDA->Damage;
+                            if (ImGui::SliderFloat("Melee DMG", &meleeDamage, 50.f, 2000.f))
+                            {
+                                // Apply immediately
+                                ps->MeleeDA->Damage = meleeDamage;
+                            }
+                        }
+                    }
+
+                    ImGui::EndTabItem();
+                }
+
+                ImGui::EndTabBar();
+            }
+        }
+
+        ImGui::End();
+    }
+
+
+
+    // ------------------------------
+    // Player HUD
+    // ------------------------------
+    void Menu::HUD()
+    {
+        if (!g_Console)
+            return;
+
+        g_Console->cLog("[*] HUD Info (runtime)\n", DX11Base::Console::EColor_dark_yellow);
+
+        SDK::UWorld* world = nullptr;
+        uintptr_t moduleBase = (uintptr_t)GetModuleHandle(L"CrabChampions-Win64-Shipping.exe");
+        if (!moduleBase)
+            moduleBase = (uintptr_t)GetModuleHandle(nullptr);
+
+        __try { world = *reinterpret_cast<SDK::UWorld**>(moduleBase + ::Offsets::GWorld); }
+        __except (EXCEPTION_EXECUTE_HANDLER) { world = nullptr; }
+
+        if (!world)
+        {
+            g_Console->cLog("[!] GWorld is null.\n", DX11Base::Console::EColor_dark_red);
+            return;
+        }
+
+        g_Engine->pWorld = world;
+
+        SDK::UGameInstance* gi = nullptr;
+        __try { gi = world->OwningGameInstance; }
+        __except (EXCEPTION_EXECUTE_HANDLER) { gi = nullptr; }
+
+        if (!gi)
+        {
+            g_Console->cLog("[!] GameInstance is null.\n", DX11Base::Console::EColor_dark_red);
+            return;
+        }
+
+        int count = 0;
+        __try { count = gi->LocalPlayers.Num(); }
+        __except (EXCEPTION_EXECUTE_HANDLER) { count = 0; }
+
+        g_Console->cLog("[+] LocalPlayers count: %d\n", DX11Base::Console::EColor_dark_green, count);
+
+        for (int i = 0; i < count; ++i)
+        {
+            SDK::ULocalPlayer* local = nullptr;
+            __try { local = gi->LocalPlayers[i]; }
+            __except (EXCEPTION_EXECUTE_HANDLER) { local = nullptr; }
+            if (!local) continue;
+
+            SDK::APlayerController* pc = nullptr;
+            __try { pc = local->PlayerController; }
+            __except (EXCEPTION_EXECUTE_HANDLER) { pc = nullptr; }
+            if (!pc) continue;
+
+            SDK::APawn* pawn = nullptr;
+            __try { pawn = pc->AcknowledgedPawn; }
+            __except (EXCEPTION_EXECUTE_HANDLER) { pawn = nullptr; }
+            if (!pawn) continue;
+
+            SDK::FVector loc{ 0.f,0.f,0.f };
+            __try { if (pawn->RootComponent) loc = pawn->RootComponent->RelativeLocation; }
+            __except (EXCEPTION_EXECUTE_HANDLER) {}
+
+            float speed = 0.f;
+            __try
+            {
+                SDK::UCharacterMovementComponent* moveComp = *(SDK::UCharacterMovementComponent**)((uintptr_t)pawn + 0x4C0);
+                if (moveComp)
+                {
+                    SDK::FVector vel = *(SDK::FVector*)((uintptr_t)moveComp + 0x140);
+                    speed = sqrtf(vel.X * vel.X + vel.Y * vel.Y + vel.Z * vel.Z);
+                    if (!isfinite(speed)) speed = 0.f;
+                }
+            }
+            __except (EXCEPTION_EXECUTE_HANDLER) { speed = 0.f; }
+
+            float health = 0.f, maxHealth = 0.f;
+            SDK::ACrabPS* ps = nullptr;
+            __try { ps = reinterpret_cast<SDK::ACrabPS*>(pawn->PlayerState); }
+            __except (EXCEPTION_EXECUTE_HANDLER) { ps = nullptr; }
+
+            if (ps)
+            {
+                __try
+                {
+                    health = ps->HealthInfo.CurrentHealth;
+                    maxHealth = ps->HealthInfo.CurrentMaxHealth;
+                }
+                __except (EXCEPTION_EXECUTE_HANDLER) { health = maxHealth = 0.f; }
+            }
+
+            float healthPct = maxHealth > 0.f ? (health / maxHealth) * 100.f : 0.f;
+
+            g_Console->cLog("LocalPlayer[%d]: 0x%p\n", DX11Base::Console::EColor_dark_green, i, (void*)local);
+            g_Console->cLog("  PlayerController: 0x%p\n", DX11Base::Console::EColor_dark_green, (void*)pc);
+            g_Console->cLog("  Pawn: 0x%p\n", DX11Base::Console::EColor_dark_green, (void*)pawn);
+            g_Console->cLog("    PS: 0x%p\n", DX11Base::Console::EColor_dark_green, (void*)ps);
+            g_Console->cLog("    Location: X=%.2f Y=%.2f Z=%.2f\n", DX11Base::Console::EColor_dark_green, loc.X, loc.Y, loc.Z);
+            g_Console->cLog("    Speed: %.2f units/s\n", DX11Base::Console::EColor_dark_green, speed);
+            g_Console->cLog("    Health: %.2f / %.2f (%.1f%%)\n", DX11Base::Console::EColor_dark_green, health, maxHealth, healthPct);
+            g_Console->cLog("-------------------------------------------------\n", DX11Base::Console::EColor_dark_gray);
+        }
+
+        g_Console->cLog("[*] --- End HUD Info ---\n\n", DX11Base::Console::EColor_dark_yellow);
+    }
+
+    // ----------------------------------------------------------------
+    // Function to dump local player and main offsets to console
+    // ----------------------------------------------------------------
+    void DX11Base::Menu::DumpLocalPlayerOffsets()
+    {
+        char buffer[512];
+
+        g_Console->cLog("[*] Dumping LocalPlayer Offsets (runtime)\n", Console::EColor_dark_yellow);
+
+        uintptr_t moduleBase = (uintptr_t)GetModuleHandle(L"CrabChampions-Win64-Shipping.exe");
+        if (!moduleBase)
+            moduleBase = (uintptr_t)GetModuleHandle(nullptr);
+
+        if (!moduleBase)
+        {
+            g_Console->cLog("[!] Unable to get module base.\n", Console::EColor_dark_red);
+            return;
+        }
+
+        UWorld* GWorldPtr = nullptr;
+        __try
+        {
+            GWorldPtr = *reinterpret_cast<UWorld**>(moduleBase + ::Offsets::GWorld);
+        }
+        __except (EXCEPTION_EXECUTE_HANDLER)
+        {
+            GWorldPtr = nullptr;
+        }
+
+        if (!GWorldPtr)
+        {
+            std::snprintf(buffer, sizeof(buffer), "[!] GWorld is null. Check ::Offsets::GWorld (0x%zX) and module name.\n", ::Offsets::GWorld);
+            g_Console->cLog(buffer, Console::EColor_dark_red);
+            return;
+        }
+
+        std::snprintf(buffer, sizeof(buffer), "[+] GWorld: 0x%p\n", (void*)GWorldPtr);
+        g_Console->cLog(buffer, Console::EColor_dark_green);
+
+        UGameInstance* GameInstance = nullptr;
+        __try { GameInstance = GWorldPtr->OwningGameInstance; }
+        __except (EXCEPTION_EXECUTE_HANDLER) { GameInstance = nullptr; }
+
+        std::snprintf(buffer, sizeof(buffer), "[+] GameInstance: 0x%p\n", (void*)GameInstance);
+        g_Console->cLog(buffer, Console::EColor_dark_green);
+
+        if (!GameInstance)
+        {
+            g_Console->cLog("[!] GameInstance is null. Aborting further derefs.\n", Console::EColor_dark_red);
+            return;
+        }
+
+        int32 countLocalPlayers = 0;
+        __try { countLocalPlayers = GameInstance->LocalPlayers.Num(); }
+        __except (EXCEPTION_EXECUTE_HANDLER) { countLocalPlayers = 0; }
+
+        std::snprintf(buffer, sizeof(buffer), "[+] LocalPlayers count: %d\n", countLocalPlayers);
+        g_Console->cLog(buffer, Console::EColor_dark_green);
+
+        if (countLocalPlayers <= 0)
+        {
+            g_Console->cLog("[!] No local players found (count == 0)\n", Console::EColor_dark_yellow);
+        }
+
+        for (int i = 0; i < countLocalPlayers; ++i)
+        {
+            ULocalPlayer* local = nullptr;
+            __try { local = GameInstance->LocalPlayers[i]; }
+            __except (EXCEPTION_EXECUTE_HANDLER) { local = nullptr; }
+
+            std::snprintf(buffer, sizeof(buffer), "    [+] LocalPlayer[%d]: 0x%p\n", i, (void*)local);
+            g_Console->cLog(buffer, Console::EColor_dark_green);
+
+            if (!local)
+                continue;
+
+            APlayerController* pc = nullptr;
+            __try { pc = local->PlayerController; }
+            __except (EXCEPTION_EXECUTE_HANDLER) { pc = nullptr; }
+
+            std::snprintf(buffer, sizeof(buffer), "        [+] PlayerController: 0x%p\n", (void*)pc);
+            g_Console->cLog(buffer, Console::EColor_dark_green);
+
+            if (!pc)
+                continue;
+
+            APawn* pawn = nullptr;
+            __try { pawn = pc->AcknowledgedPawn; }
+            __except (EXCEPTION_EXECUTE_HANDLER) { pawn = nullptr; }
+
+            std::snprintf(buffer, sizeof(buffer), "            [+] Pawn: 0x%p\n", (void*)pawn);
+            g_Console->cLog(buffer, Console::EColor_dark_green);
+
+            if (!pawn)
+                continue;
+
+            USceneComponent* root = nullptr;
+            __try { root = pawn->RootComponent; }
+            __except (EXCEPTION_EXECUTE_HANDLER) { root = nullptr; }
+
+            std::snprintf(buffer, sizeof(buffer), "                [+] RootComponent: 0x%p\n", (void*)root);
+            g_Console->cLog(buffer, Console::EColor_dark_green);
+
+            DX11Base::Vector3 loc = { 0.0f, 0.0f, 0.0f };
+            if (root)
+            {
+                __try
+                {
+                    loc.x = root->RelativeLocation.X;
+                    loc.y = root->RelativeLocation.Y;
+                    loc.z = root->RelativeLocation.Z;
+                }
+                __except (EXCEPTION_EXECUTE_HANDLER)
+                {
+                    loc.x = loc.y = loc.z = 0.0f;
+                }
+            }
+
+            std::snprintf(buffer, sizeof(buffer), "                [+] Location: X=%.2f Y=%.2f Z=%.2f\n", loc.x, loc.y, loc.z);
+            g_Console->cLog(buffer, Console::EColor_dark_green);
+        }
+
+        std::snprintf(buffer, sizeof(buffer), "[*] Offsets summary: GWorld=0x%zX, GObjects=0x%zX, GNames=0x%zX, ProcessEvent=0x%zX\n",
+            ::Offsets::GWorld, ::Offsets::GObjects, ::Offsets::GNames, ::Offsets::ProcessEvent);
+        g_Console->cLog(buffer, Console::EColor_dark_yellow);
+    }
+
+    //----------------------------------------------------------------------------------------------------
+    //										GUI
+    //-----------------------------------------------------------------------------------
+
+    void GUI::TextCentered(const char* pText)
+    {
+        ImVec2 textSize = ImGui::CalcTextSize(pText);
+        ImVec2 windowSize = ImGui::GetWindowSize();
+        ImVec2 textPos = ImVec2((windowSize.x - textSize.x) * 0.5f, (windowSize.y - textSize.y) * 0.5f);
+        ImGui::SetCursorPos(textPos);
+        ImGui::Text("%s", pText);
+    }
+
+    void GUI::TextCenteredf(const char* pText, ...)
+    {
+        va_list args;
+        va_start(args, pText);
+        char buffer[256];
+        vsnprintf(buffer, sizeof(buffer), pText, args);
+        va_end(args);
+
+        TextCentered(buffer);
+    }
+
+    void GUI::DrawText_(ImVec2 pos, ImColor color, const char* pText, float fontSize)
+    {
+        ImGui::GetWindowDrawList()->AddText(ImGui::GetFont(), fontSize, pos, color, pText, pText + strlen(pText), 800, 0);
+    }
+
+    void GUI::DrawTextf(ImVec2 pos, ImColor color, const char* pText, float fontSize, ...)
+    {
+        va_list args;
+        va_start(args, fontSize);
+        char buffer[256];
+        vsnprintf(buffer, sizeof(buffer), pText, args);
+        va_end(args);
+
+        DrawText_(pos, color, buffer, fontSize);
+    }
+
+    void GUI::DrawTextCentered(ImVec2 pos, ImColor color, const char* pText, float fontSize)
+    {
+        float textSize = ImGui::CalcTextSize(pText).x;
+        ImVec2 textPosition = ImVec2(pos.x - (textSize * 0.5f), pos.y);
+        DrawText_(textPosition, color, pText, fontSize);
+    }
+
+    void GUI::DrawTextCenteredf(ImVec2 pos, ImColor color, const char* pText, float fontSize, ...)
+    {
+        va_list args;
+        va_start(args, fontSize);
+        char buffer[256];
+        vsnprintf(buffer, sizeof(buffer), pText, args);
+        va_end(args);
+
+        DrawTextCentered(pos, color, buffer, fontSize);
+    }
+}
