@@ -58,12 +58,17 @@
 
 ---
 
-## Screenshots
+## 📸 Screenshots
 
-![screenshot](https://pasteboard.co/17IIEFpDSPq0.png "Menu/Stats")
-![screenshot2](https://pasteboard.co/qMJrqj83h3e4.png "Movement")
-![screenshot](<img width="485" height="252" alt="image" src="https://github.com/user-attachments/assets/884833ef-3707-4361-af98-ca8200d6b28c" />
- "Combat")
+### Main Menu
+![Main Menu](https://raw.githubusercontent.com/Landan420/CrabChampionsSDKBase/refs/heads/master/screenshots/image.webp)
+
+### Player Info Overrides - Movement
+![Movement Overrides](https://raw.githubusercontent.com/Landan420/CrabChampionsSDKBase/refs/heads/master/screenshots/image1.webp)
+
+### Player Info Overrides - Combat
+![Combat Overrides](https://raw.githubusercontent.com/Landan420/CrabChampionsSDKBase/refs/heads/master/screenshots/image2.webp)
+
 
 ---
 
