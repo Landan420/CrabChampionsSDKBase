@@ -34,6 +34,7 @@ namespace DX11Base
 		bool								bShowMenu{ false };
 		bool								bShowHUD{ false };   // fixed type and name
 		bool								bShowDemo{ false };
+		bool								bShowESP{ false };
 		bool								bShowDemoWindow{ false };
 		bool								bShowStyleEditor{ false };
 		bool bGodMode = false; // defaults to OFF
@@ -63,6 +64,7 @@ namespace DX11Base
 		~Engine();
 	};
 	inline std::unique_ptr<Engine> g_Engine;
+	inline std::vector<SDK::ACrabEnemyC*> gCachedEnemies;
 
 	class Console
 	{

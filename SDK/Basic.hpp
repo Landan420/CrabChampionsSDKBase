@@ -245,7 +245,7 @@ private:
 private:
 	void* GObjectsAddress = nullptr;
 
-private:
+public:
 	TUObjectArrayWrapper() = default;
 
 public:

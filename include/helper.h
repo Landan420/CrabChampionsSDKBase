@@ -4,6 +4,7 @@
 #include "pch.h"
 #include "SDK.h"
 
+
 extern DWORD WINAPI MainThread_Initialize(LPVOID dwModule);
 
 namespace DX11Base
@@ -26,6 +27,7 @@ namespace DX11Base
 	};
 
 
+
 	struct Vector3 
 	{
 		float x, y, z;
@@ -34,15 +36,6 @@ namespace DX11Base
 	struct Vector4 
 	{
 		float x, y, z, w;
-	};
-
-	struct FVector
-	{
-		float X, Y, Z;
-
-		FVector() = default;
-		FVector(const DX11Base::FVector& other) : X(other.X), Y(other.Y), Z(other.Z) {}
-		FVector& operator=(const DX11Base::FVector& other) { X = other.X; Y = other.Y; Z = other.Z; return *this; }
 	};
 
 	struct DVector2 

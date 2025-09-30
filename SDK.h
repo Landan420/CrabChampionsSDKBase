@@ -15,6 +15,7 @@
 // --- Engine ---
 #include "SDK/Engine_structs.hpp"
 #include "SDK/Engine_classes.hpp"
+#include "SDK/Engine_structs.hpp"
 
 // --- Optional: Gameplay / Input / UI ---
 #include "SDK/InputCore_structs.hpp"

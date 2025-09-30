@@ -3,8 +3,11 @@
 #include <Menu.h>
 #include "SDK.h"
 #include "helper.h"
+#include "SDKHelper.h"
 
 using namespace SDK; // <-- makes UWorld, UPlayer, ACrabPS, etc. visible
+using namespace SDKHelper;
+
 
 namespace DX11Base
 {
@@ -49,8 +52,10 @@ namespace DX11Base
         if (g_Engine->bShowMenu)
             MainMenu();
 
-        if (g_Engine->bShowHUD)
-            HUD();
+        if (g_Engine->bShowESP)
+            ESP();
+
+            
     }
 
     void DX11Base::Menu::Loops()
@@ -251,6 +256,7 @@ namespace DX11Base
 
         ImGui::Spacing();
         ImGui::Checkbox("Show Player HUD", &g_Engine->bShowHUD);
+        ImGui::Checkbox("Enemy ESP", &g_Engine->bShowESP);
 
         ImGui::Checkbox("Godmode", &g_Engine->bGodMode);
         ImGui::Checkbox("Infinite Ammo", &g_Engine->bInfiniteAmmo);
@@ -403,113 +409,111 @@ namespace DX11Base
         ImGui::End();
     }
 
-
-
-    // ------------------------------
-    // Player HUD
-    // ------------------------------
-    void Menu::HUD()
+    void Menu::ESP()
     {
-        if (!g_Console)
+        if (!g_Engine)
             return;
 
-        g_Console->cLog("[*] HUD Info (runtime)\n", DX11Base::Console::EColor_dark_yellow);
-
-        SDK::UWorld* world = nullptr;
-        uintptr_t moduleBase = (uintptr_t)GetModuleHandle(L"CrabChampions-Win64-Shipping.exe");
-        if (!moduleBase)
-            moduleBase = (uintptr_t)GetModuleHandle(nullptr);
-
-        __try { world = *reinterpret_cast<SDK::UWorld**>(moduleBase + ::Offsets::GWorld); }
-        __except (EXCEPTION_EXECUTE_HANDLER) { world = nullptr; }
-
+        // Get world
+        SDK::UWorld* world = g_Engine->pWorld;
         if (!world)
-        {
-            g_Console->cLog("[!] GWorld is null.\n", DX11Base::Console::EColor_dark_red);
             return;
-        }
 
-        g_Engine->pWorld = world;
-
-        SDK::UGameInstance* gi = nullptr;
-        __try { gi = world->OwningGameInstance; }
-        __except (EXCEPTION_EXECUTE_HANDLER) { gi = nullptr; }
-
+        SDK::UGameInstance* gi = world->OwningGameInstance;
         if (!gi)
-        {
-            g_Console->cLog("[!] GameInstance is null.\n", DX11Base::Console::EColor_dark_red);
             return;
+
+        // Get local player controller and pawn
+        SDK::APlayerController* localPC = nullptr;
+        SDK::APawn* localPawn = nullptr;
+        for (int i = 0; i < gi->LocalPlayers.Num(); ++i)
+        {
+            SDK::ULocalPlayer* local = gi->LocalPlayers[i];
+            if (!local || !local->PlayerController) continue;
+
+            localPC = local->PlayerController;
+            localPawn = localPC->AcknowledgedPawn;
+            break;
         }
 
-        int count = 0;
-        __try { count = gi->LocalPlayers.Num(); }
-        __except (EXCEPTION_EXECUTE_HANDLER) { count = 0; }
+        if (!localPC || !localPawn)
+            return;
 
-        g_Console->cLog("[+] LocalPlayers count: %d\n", DX11Base::Console::EColor_dark_green, count);
+        SDK::FVector localLoc = localPawn->RootComponent ? localPawn->RootComponent->RelativeLocation : SDK::FVector{ 0,0,0 };
 
-        for (int i = 0; i < count; ++i)
+        // Get actors in level
+        SDK::ULevel* level = world->PersistentLevel;
+        if (!level)
+            return;
+
+        TArray<SDK::AActor*>& actors = *reinterpret_cast<TArray<SDK::AActor*>*>((uintptr_t)level + 0x98);
+
+        // Clear previous enemy cache
+        gCachedEnemies.clear();
+
+        for (auto* actor : actors)
         {
-            SDK::ULocalPlayer* local = nullptr;
-            __try { local = gi->LocalPlayers[i]; }
-            __except (EXCEPTION_EXECUTE_HANDLER) { local = nullptr; }
-            if (!local) continue;
+            if (!actor || actor == localPawn || !actor->Class) continue;
 
-            SDK::APlayerController* pc = nullptr;
-            __try { pc = local->PlayerController; }
-            __except (EXCEPTION_EXECUTE_HANDLER) { pc = nullptr; }
-            if (!pc) continue;
+            std::string className = actor->Class->GetName();
+            if (className.find("BP_Enemy_") == std::string::npos &&
+                className.find("BP_EQC_") == std::string::npos)
+                continue;
 
-            SDK::APawn* pawn = nullptr;
-            __try { pawn = pc->AcknowledgedPawn; }
-            __except (EXCEPTION_EXECUTE_HANDLER) { pawn = nullptr; }
-            if (!pawn) continue;
+            gCachedEnemies.push_back(static_cast<SDK::ACrabEnemyC*>(actor));
 
-            SDK::FVector loc{ 0.f,0.f,0.f };
-            __try { if (pawn->RootComponent) loc = pawn->RootComponent->RelativeLocation; }
-            __except (EXCEPTION_EXECUTE_HANDLER) {}
+            SDK::FVector loc = actor->RootComponent ? actor->RootComponent->RelativeLocation : SDK::FVector{ 0,0,0 };
 
-            float speed = 0.f;
-            __try
-            {
-                SDK::UCharacterMovementComponent* moveComp = *(SDK::UCharacterMovementComponent**)((uintptr_t)pawn + 0x4C0);
-                if (moveComp)
-                {
-                    SDK::FVector vel = *(SDK::FVector*)((uintptr_t)moveComp + 0x140);
-                    speed = sqrtf(vel.X * vel.X + vel.Y * vel.Y + vel.Z * vel.Z);
-                    if (!isfinite(speed)) speed = 0.f;
-                }
-            }
-            __except (EXCEPTION_EXECUTE_HANDLER) { speed = 0.f; }
+            // Project to screen
+            SDK::FVector2D screenPos;
+            if (!localPC->ProjectWorldLocationToScreen(loc, &screenPos, false))
+                continue;
 
+            // Distance-based scaling
+            float distance = sqrtf(
+                powf(loc.X - localLoc.X, 2) +
+                powf(loc.Y - localLoc.Y, 2) +
+                powf(loc.Z - localLoc.Z, 2)
+            );
+
+            float scale = 1000.f / (distance + 1.f);
+            if (scale < 0.5f) scale = 0.5f;
+            if (scale > 1.0f) scale = 1.0f;
+
+            float boxWidth = 40.f * scale;
+            float boxHeight = 80.f * scale;
+
+            ImVec2 tl(screenPos.X - boxWidth / 2.f, screenPos.Y - boxHeight / 2.f);
+            ImVec2 br(screenPos.X + boxWidth / 2.f, screenPos.Y + boxHeight / 2.f);
+
+            // Draw box
+            ImGui::GetForegroundDrawList()->AddRect(tl, br, IM_COL32(255, 0, 0, 255), 0.0f, 0, 2.0f);
+
+            // Draw name
+            const char* name = actor->Class ? actor->Class->GetName().c_str() : "Enemy";
+            ImGui::GetForegroundDrawList()->AddText(ImVec2(tl.x, tl.y - 12.f), IM_COL32(255, 255, 255, 255), name);
+
+            // Draw health below box
+            SDK::ACrabEnemyC* enemyPawn = static_cast<SDK::ACrabEnemyC*>(actor);
             float health = 0.f, maxHealth = 0.f;
-            SDK::ACrabPS* ps = nullptr;
-            __try { ps = reinterpret_cast<SDK::ACrabPS*>(pawn->PlayerState); }
-            __except (EXCEPTION_EXECUTE_HANDLER) { ps = nullptr; }
 
-            if (ps)
+            if (enemyPawn && enemyPawn->PlayerState)
             {
-                __try
+                SDK::ACrabPS* ps = reinterpret_cast<SDK::ACrabPS*>(enemyPawn->PlayerState);
+                if (ps)
                 {
                     health = ps->HealthInfo.CurrentHealth;
                     maxHealth = ps->HealthInfo.CurrentMaxHealth;
                 }
-                __except (EXCEPTION_EXECUTE_HANDLER) { health = maxHealth = 0.f; }
             }
-
             float healthPct = maxHealth > 0.f ? (health / maxHealth) * 100.f : 0.f;
 
-            g_Console->cLog("LocalPlayer[%d]: 0x%p\n", DX11Base::Console::EColor_dark_green, i, (void*)local);
-            g_Console->cLog("  PlayerController: 0x%p\n", DX11Base::Console::EColor_dark_green, (void*)pc);
-            g_Console->cLog("  Pawn: 0x%p\n", DX11Base::Console::EColor_dark_green, (void*)pawn);
-            g_Console->cLog("    PS: 0x%p\n", DX11Base::Console::EColor_dark_green, (void*)ps);
-            g_Console->cLog("    Location: X=%.2f Y=%.2f Z=%.2f\n", DX11Base::Console::EColor_dark_green, loc.X, loc.Y, loc.Z);
-            g_Console->cLog("    Speed: %.2f units/s\n", DX11Base::Console::EColor_dark_green, speed);
-            g_Console->cLog("    Health: %.2f / %.2f (%.1f%%)\n", DX11Base::Console::EColor_dark_green, health, maxHealth, healthPct);
-            g_Console->cLog("-------------------------------------------------\n", DX11Base::Console::EColor_dark_gray);
+            char healthText[32];
+            sprintf_s(healthText, "HP: %.0f%%", healthPct);
+            ImGui::GetForegroundDrawList()->AddText(ImVec2(tl.x, br.y + 2.f), IM_COL32(0, 255, 0, 255), healthText);
         }
-
-        g_Console->cLog("[*] --- End HUD Info ---\n\n", DX11Base::Console::EColor_dark_yellow);
     }
+
 
     // ----------------------------------------------------------------
     // Function to dump local player and main offsets to console

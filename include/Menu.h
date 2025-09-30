@@ -2,16 +2,18 @@
 #include "helper.h"
 namespace DX11Base 
 {
+
 	class Menu
 	{
 	public:
 		static void Draw();
+		static void ESP();
 		static void MainMenu();
-		static void HUD();
 
 
 		static void Loops();
 		static void DumpLocalPlayerOffsets();
+
 
 		
 
