@@ -13,6 +13,7 @@
 
 ### Cheats / Game Modifiers
 - **Godmode**: Instantly restores player health to maximum.
+- **Enemy ESP**
 - **Infinite Ammo**: Ammo count never decreases.
 - **No Reload**: Eliminates reload delay for all weapons.
 - **No Cooldowns**: Abolishes cooldowns for abilities and melee.
