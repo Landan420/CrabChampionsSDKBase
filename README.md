@@ -1,7 +1,7 @@
 # Crab Champions 0.1 - DX11Base Menu
 
 **DX11Base** is an internal menu and runtime tool for *Crab Champions* built with ImGui and DirectX11. It provides advanced player modifications, combat enhancements, and real-time HUD information.  
-
+**FYI ChatGPT Helped A lot..**
 ---
 
 ## Features
