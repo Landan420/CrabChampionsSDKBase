@@ -5,11 +5,6 @@
 **FYI ChatGPT Helped A lot..**
 ---
 
-# Crab Champions Menu
-
-This project is a runtime menu for **Crab Champions**, providing a robust set of gameplay modifications, player overrides, and debugging utilities. It uses **ImGui** for the GUI and allows live in-game adjustments.
-
----
 
 ## Features
 
