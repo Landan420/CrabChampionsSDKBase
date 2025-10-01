@@ -545,24 +545,6 @@ namespace DX11Base
             }
 
             ImGui::GetForegroundDrawList()->AddText(ImVec2(tl.x, tl.y - 12.f), IM_COL32(255, 255, 255, 255), enemyName.c_str());
-
-            // Draw health below box
-            float health = 0.f, maxHealth = 0.f;
-
-            if (enemyPawn && enemyPawn->PlayerState)
-            {
-                SDK::ACrabPS* ps = reinterpret_cast<SDK::ACrabPS*>(enemyPawn->PlayerState);
-                if (ps)
-                {
-                    health = ps->HealthInfo.CurrentHealth;
-                    maxHealth = ps->HealthInfo.CurrentMaxHealth;
-                }
-            }
-            float healthPct = maxHealth > 0.f ? (health / maxHealth) * 100.f : 0.f;
-
-            char healthText[32];
-            sprintf_s(healthText, "HP: %.0f%%", healthPct);
-            ImGui::GetForegroundDrawList()->AddText(ImVec2(tl.x, br.y + 2.f), IM_COL32(0, 255, 0, 255), healthText);
         }
     }
 
