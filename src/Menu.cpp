@@ -19,27 +19,58 @@ namespace DX11Base
         void BaseStyle()
         {
             ImGuiStyle& style = ImGui::GetStyle();
-            ImVec4* colors = ImGui::GetStyle().Colors;
+            ImVec4* colors = style.Colors;
+
+            // Start from dark base
+            ImGui::StyleColorsDark();
+
+            style.WindowRounding = 6.0f;
+            style.ChildRounding = 6.0f;
+            style.FrameRounding = 5.0f;
+            style.ScrollbarRounding = 6.0f;
+
+            style.WindowBorderSize = 1.0f;
+            style.FrameBorderSize = 1.0f;
 
             style.WindowTitleAlign = ImVec2(0.5f, 0.5f);
-            ImGui::StyleColorsDark();
-        }
 
-        void SetNavigationMenuViewState(bool bShow)
-        {
-            ImVec4* colors = ImGui::GetStyle().Colors;
-            if (bShow)
-            {
-                colors[ImGuiCol_Text] = ImVec4(1.f, 1.f, 1.f, 1.f);
-                colors[ImGuiCol_WindowBg] = ImVec4(0.06f, 0.06f, 0.06f, 0.94f);
-                colors[ImGuiCol_Border] = ImVec4(0.43f, 0.43f, 0.50f, 0.50f);
-                colors[ImGuiCol_NavHighlight] = ImVec4(0.26f, 0.59f, 0.98f, 1.f);
-            }
-            else
-            {
-                for (int i = 0; i < ImGuiCol_COUNT; ++i)
-                    colors[i] = ImVec4(0.f, 0.f, 0.f, 0.f);
-            }
+            // Base backgrounds and borders
+            colors[ImGuiCol_WindowBg] = ImVec4(0.10f, 0.10f, 0.10f, 1.00f);
+            colors[ImGuiCol_ChildBg] = ImVec4(0.12f, 0.12f, 0.12f, 1.00f);
+            colors[ImGuiCol_Border] = ImVec4(0.35f, 0.35f, 0.35f, 0.80f);
+            colors[ImGuiCol_FrameBg] = ImVec4(0.20f, 0.20f, 0.20f, 1.00f);
+            colors[ImGuiCol_FrameBgHovered] = ImVec4(0.25f, 0.25f, 0.25f, 1.00f);
+            colors[ImGuiCol_FrameBgActive] = ImVec4(0.35f, 0.35f, 0.35f, 1.00f);
+
+            // Buttons
+            colors[ImGuiCol_Button] = ImVec4(0.20f, 0.20f, 0.20f, 1.00f);
+            colors[ImGuiCol_ButtonHovered] = ImVec4(0.85f, 0.10f, 0.10f, 1.00f);
+            colors[ImGuiCol_ButtonActive] = ImVec4(0.90f, 0.05f, 0.05f, 1.00f);
+
+            // Headers / Collapsing / Tabs area accents
+            colors[ImGuiCol_Header] = ImVec4(0.35f, 0.05f, 0.05f, 0.8f);
+            colors[ImGuiCol_HeaderHovered] = ImVec4(0.85f, 0.10f, 0.10f, 0.8f);
+            colors[ImGuiCol_HeaderActive] = ImVec4(0.90f, 0.05f, 0.05f, 1.00f);
+
+            // Tabs
+            colors[ImGuiCol_Tab] = ImVec4(0.30f, 0.05f, 0.05f, 0.8f);
+            colors[ImGuiCol_TabHovered] = ImVec4(0.85f, 0.10f, 0.10f, 1.00f);
+            colors[ImGuiCol_TabActive] = ImVec4(0.90f, 0.05f, 0.05f, 1.00f);
+            colors[ImGuiCol_TabUnfocused] = ImVec4(0.25f, 0.05f, 0.05f, 0.6f);
+            colors[ImGuiCol_TabUnfocusedActive] = ImVec4(0.40f, 0.08f, 0.08f, 1.00f);
+
+            // Title / Menu bar accent (if ImGui uses “TitleBg” or “TitleBgActive”)
+            colors[ImGuiCol_TitleBg] = ImVec4(0.15f, 0.05f, 0.05f, 1.00f);
+            colors[ImGuiCol_TitleBgActive] = ImVec4(0.25f, 0.08f, 0.08f, 1.00f);
+            colors[ImGuiCol_TitleBgCollapsed] = ImVec4(0.12f, 0.04f, 0.04f, 0.80f);
+
+            // Misc accents (sliders, checkmarks, etc.)
+            colors[ImGuiCol_CheckMark] = ImVec4(0.90f, 0.05f, 0.05f, 1.00f);
+            colors[ImGuiCol_SliderGrab] = ImVec4(0.85f, 0.10f, 0.10f, 1.00f);
+            colors[ImGuiCol_SliderGrabActive] = ImVec4(0.90f, 0.05f, 0.05f, 1.00f);
+            colors[ImGuiCol_Separator] = ImVec4(0.35f, 0.10f, 0.10f, 0.60f);
+            colors[ImGuiCol_SeparatorHovered] = ImVec4(0.85f, 0.10f, 0.10f, 1.00f);
+            colors[ImGuiCol_SeparatorActive] = ImVec4(0.90f, 0.05f, 0.05f, 1.00f);
         }
     }
 
@@ -248,162 +279,177 @@ namespace DX11Base
             return;
         }
 
-        if (ImGui::Button("UNHOOK DLL", ImVec2(ImGui::GetContentRegionAvail().x, 25)))
-            g_KillSwitch = TRUE;
-
-        if (ImGui::Button("DUMP OFFSETS", ImVec2(ImGui::GetContentRegionAvail().x, 25)))
-            DumpLocalPlayerOffsets();
-
-        ImGui::Spacing();
-        ImGui::Checkbox("Show Player HUD", &g_Engine->bShowHUD);
-        ImGui::Checkbox("Enemy ESP", &g_Engine->bShowESP);
-
-        ImGui::Checkbox("Godmode", &g_Engine->bGodMode);
-        ImGui::Checkbox("Infinite Ammo", &g_Engine->bInfiniteAmmo);
-        ImGui::Checkbox("No Reload", &g_Engine->bNoReload);
-        ImGui::Checkbox("No Cooldowns", &g_Engine->bNoCooldowns);
-        ImGui::Checkbox("No Spread", &g_Engine->g_bNoSpread);
-
-
-        if (ImGui::CollapsingHeader("Player Info Overrides"))
+        if (!g_Engine || !g_Engine->pWorld)
         {
-            if (!g_Engine || !g_Engine->pWorld)
-                return;
+            ImGui::End();
+            return;
+        }
 
-            SDK::ACrabC* playerPawn = nullptr;
-            __try
+        SDK::ACrabC* playerPawn = nullptr;
+        __try
+        {
+            SDK::APawn* pawn = g_Engine->pWorld->OwningGameInstance->LocalPlayers[0]->PlayerController->AcknowledgedPawn;
+            playerPawn = static_cast<SDK::ACrabC*>(pawn);
+        }
+        __except (EXCEPTION_EXECUTE_HANDLER) { playerPawn = nullptr; }
+
+        if (!playerPawn || !playerPawn->PlayerState)
+        {
+            ImGui::TextColored(ImVec4(1.f, 0.f, 0.f, 1.f), "PlayerState not valid");
+            ImGui::End();
+            return;
+        }
+
+        SDK::ACrabPS* ps = static_cast<SDK::ACrabPS*>(playerPawn->PlayerState);
+        SDK::ACrabPlayerC* player = static_cast<SDK::ACrabPlayerC*>(playerPawn);
+
+        if (ImGui::BeginTabBar("MainTabs"))
+        {
+            // ---------------- Main Tab ----------------
+            if (ImGui::BeginTabItem("Main"))
             {
-                SDK::APawn* pawn = g_Engine->pWorld->OwningGameInstance->LocalPlayers[0]->PlayerController->AcknowledgedPawn;
-                playerPawn = static_cast<SDK::ACrabC*>(pawn);
+                ImGui::Checkbox("Enemy ESP", &g_Engine->bShowESP);
+                ImGui::Checkbox("Godmode", &g_Engine->bGodMode);
+                ImGui::Checkbox("Infinite Ammo", &g_Engine->bInfiniteAmmo);
+                ImGui::Checkbox("No Reload", &g_Engine->bNoReload);
+                ImGui::Checkbox("No Cooldowns", &g_Engine->bNoCooldowns);
+                ImGui::Checkbox("No Spread", &g_Engine->g_bNoSpread);
+
+                ImGui::EndTabItem();
             }
-            __except (EXCEPTION_EXECUTE_HANDLER) { playerPawn = nullptr; }
 
-            if (!playerPawn || !playerPawn->PlayerState)
+            // ---------------- Stats Tab ----------------
+            if (ImGui::BeginTabItem("Stats"))
             {
-                ImGui::TextColored(ImVec4(1.f, 0.f, 0.f, 1.f), "PlayerState not valid");
-                return;
+                static int overrideRank = static_cast<int>(ps->AccountRank);
+                const char* rankNames[] = { "None", "Bronze", "Silver", "Gold", "Sapphire", "Emerald", "Ruby", "Diamond" };
+                if (ImGui::Combo("Override Rank", &overrideRank, rankNames, IM_ARRAYSIZE(rankNames)))
+                    ps->AccountRank = static_cast<SDK::ECrabRank>(overrideRank);
+
+                static int overrideLevel = ps->AccountLevel;
+                if (ImGui::SliderInt("Override Level", &overrideLevel, 1, 100))
+                    ps->AccountLevel = overrideLevel;
+
+                static int overrideKeys = ps->Keys;
+                if (ImGui::SliderInt("Override Keys", &overrideKeys, 0, 999))
+                    ps->Keys = overrideKeys;
+
+                static int overrideCrystals = ps->Crystals;
+                if (ImGui::SliderInt("Override Crystals", &overrideCrystals, 0, 9999))
+                    ps->Crystals = overrideCrystals;
+
+                ImGui::EndTabItem();
             }
 
-            SDK::ACrabPS* ps = static_cast<SDK::ACrabPS*>(playerPawn->PlayerState);
-            SDK::ACrabPlayerC* player = static_cast<SDK::ACrabPlayerC*>(playerPawn);
-
-            if (ImGui::BeginTabBar("PlayerTabs"))
+            // ---------------- Movement Tab ----------------
+            if (ImGui::BeginTabItem("Movement"))
             {
-                if (ImGui::BeginTabItem("Stats"))
+                static float overrideWalkSpeed = playerPawn->BaseWalkSpeed;
+                if (ImGui::SliderFloat("Base Walk Speed", &overrideWalkSpeed, 0.f, 3000.f))
+                    playerPawn->BaseWalkSpeed = overrideWalkSpeed;
+
+                static float overrideAirControl = playerPawn->AirControl;
+                if (ImGui::SliderFloat("Air Control", &overrideAirControl, 0.f, 5.f))
+                    playerPawn->AirControl = overrideAirControl;
+
+                static float overrideFriction = playerPawn->GroundFriction;
+                if (ImGui::SliderFloat("Ground Friction", &overrideFriction, 0.f, 10.f))
+                    playerPawn->GroundFriction = overrideFriction;
+
+                static float overrideFlipHeight = player->FlipHeight;
+                if (ImGui::SliderFloat("Flip Height", &overrideFlipHeight, 0.f, 3000.f))
+                    player->FlipHeight = overrideFlipHeight;
+
+                static float overrideDashHeight = player->DashHeight;
+                if (ImGui::SliderFloat("Dash Height", &overrideDashHeight, 0.f, 3000.f))
+                    player->DashHeight = overrideDashHeight;
+
+                static float overrideAcceleration = playerPawn->MaxAcceleration;
+                if (ImGui::SliderFloat("Max Acceleration", &overrideAcceleration, 0.f, 5000.f))
+                    playerPawn->MaxAcceleration = overrideAcceleration;
+
+                static float overrideDashCooldown = player->BaseDashCooldown;
+                if (ImGui::SliderFloat("Dash Cooldown", &overrideDashCooldown, 0.f, 10.f))
+                    player->BaseDashCooldown = overrideDashCooldown;
+
+                ImGui::SliderFloat("Player Scale", &g_overridePlayerScale, 0.1f, 5.f);
+
+                ImGui::EndTabItem();
+            }
+
+            // ---------------- Combat Tab ----------------
+            if (ImGui::BeginTabItem("Combat"))
+            {
+                static float overrideDamageMultiplier = ps->DamageMultiplier;
+                if (ImGui::SliderFloat("Damage Multiplier", &overrideDamageMultiplier, 0.f, 10.f))
+                    ps->DamageMultiplier = overrideDamageMultiplier;
+
+                static float overrideHealthMultiplier = ps->MaxHealthMultiplier;
+                if (ImGui::SliderFloat("Health Multiplier", &overrideHealthMultiplier, 0.f, 10.f))
+                    ps->MaxHealthMultiplier = overrideHealthMultiplier;
+
+                if (ps->WeaponDA)
                 {
-                    static int overrideRank = static_cast<int>(ps->AccountRank);
-                    const char* rankNames[] = { "None", "Bronze", "Silver", "Gold", "Sapphire", "Emerald", "Ruby", "Diamond" };
-                    if (ImGui::Combo("Override Rank", &overrideRank, rankNames, IM_ARRAYSIZE(rankNames)))
-                        ps->AccountRank = static_cast<SDK::ECrabRank>(overrideRank);
+                    static float overrideFireRate = ps->WeaponDA->BaseFireRate;
+                    if (ImGui::SliderFloat("Fire Rate", &overrideFireRate, 0.01f, 10.f))
+                        ps->WeaponDA->BaseFireRate = overrideFireRate;
 
-                    static int overrideLevel = ps->AccountLevel;
-                    if (ImGui::SliderInt("Override Level", &overrideLevel, 1, 100))
-                        ps->AccountLevel = overrideLevel;
+                    static float overrideChamberDelay = ps->WeaponDA->PostFireClearChamberDelay;
+                    if (ImGui::SliderFloat("Chamber Delay", &overrideChamberDelay, 0.f, 5.f))
+                        ps->WeaponDA->PostFireClearChamberDelay = overrideChamberDelay;
 
-                    static int overrideKeys = ps->Keys;
-                    if (ImGui::SliderInt("Override Keys", &overrideKeys, 0, 999))
-                        ps->Keys = overrideKeys;
+                    static float overrideBurstDelay = ps->WeaponDA->TimeBetweenBurstShots;
+                    if (ImGui::SliderFloat("Burst Shot Delay", &overrideBurstDelay, 0.f, 5.f))
+                        ps->WeaponDA->TimeBetweenBurstShots = overrideBurstDelay;
+                   
+                    static float overrideReloadDuration = ps->WeaponDA->ReloadDuration;
+                    if (ImGui::SliderFloat("Reload Duration", &overrideReloadDuration, 0.f, 10.f))
+                        ps->WeaponDA->ReloadDuration = overrideReloadDuration;
 
-                    static int overrideCrystals = ps->Crystals;
-                    if (ImGui::SliderInt("Override Crystals", &overrideCrystals, 0, 9999))
-                        ps->Crystals = overrideCrystals;
+                    static float overrideVerticalRecoil = ps->WeaponDA->VerticalRecoil;
+                    if (ImGui::SliderFloat("Vertical Recoil", &overrideVerticalRecoil, 0.f, 50.f))
+                        ps->WeaponDA->VerticalRecoil = overrideVerticalRecoil;
 
-                    ImGui::EndTabItem();
+                    static float overrideHorizontalRecoil = ps->WeaponDA->HorizontalRecoil;
+                    if (ImGui::SliderFloat("Horizontal Recoil", &overrideHorizontalRecoil, 0.f, 50.f))
+                        ps->WeaponDA->HorizontalRecoil = overrideHorizontalRecoil;
+
+                    static float overrideRecoilInterp = ps->WeaponDA->RecoilInterpSpeed;
+                    if (ImGui::SliderFloat("Recoil Interp Speed", &overrideRecoilInterp, 0.f, 50.f))
+                        ps->WeaponDA->RecoilInterpSpeed = overrideRecoilInterp;
+
+                    static float overrideRecoveryInterp = ps->WeaponDA->RecoilRecoveryInterpSpeed;
+                    if (ImGui::SliderFloat("Recoil Recovery Speed", &overrideRecoveryInterp, 0.f, 50.f))
+                        ps->WeaponDA->RecoilRecoveryInterpSpeed = overrideRecoveryInterp;
                 }
 
-                if (ImGui::BeginTabItem("Movement"))
+                if (ps->MeleeDA)
                 {
-                    static float overrideWalkSpeed = playerPawn->BaseWalkSpeed;
-                    if (ImGui::SliderFloat("Base Walk Speed", &overrideWalkSpeed, 0.f, 3000.f))
-                        playerPawn->BaseWalkSpeed = overrideWalkSpeed;
+                    static float meleeRange = ps->MeleeDA->Range;
+                    if (ImGui::SliderFloat("Melee Range", &meleeRange, 50.f, 2000.f))
+                        ps->MeleeDA->Range = meleeRange;
 
-                    static float overrideAirControl = playerPawn->AirControl;
-                    if (ImGui::SliderFloat("Air Control", &overrideAirControl, 0.f, 5.f))
-                        playerPawn->AirControl = overrideAirControl;
-
-                    static float overrideFriction = playerPawn->GroundFriction;
-                    if (ImGui::SliderFloat("Ground Friction", &overrideFriction, 0.f, 10.f))
-                        playerPawn->GroundFriction = overrideFriction;
-
-                    static float overrideFlipHeight = player->FlipHeight;
-                    if (ImGui::SliderFloat("Flip Height", &overrideFlipHeight, 0.f, 3000.f))
-                        player->FlipHeight = overrideFlipHeight;
-
-                    static float overrideDashHeight = player->DashHeight;
-                    if (ImGui::SliderFloat("Dash Height", &overrideDashHeight, 0.f, 3000.f))
-                        player->DashHeight = overrideDashHeight;
-
-                    static float overrideAcceleration = playerPawn->MaxAcceleration;
-                    if (ImGui::SliderFloat("Max Acceleration", &overrideAcceleration, 0.f, 5000.f))
-                        playerPawn->MaxAcceleration = overrideAcceleration;
-
-                    static float overrideDashCooldown = player->BaseDashCooldown;
-                    if (ImGui::SliderFloat("Dash Cooldown", &overrideDashCooldown, 0.f, 10.f))
-                        player->BaseDashCooldown = overrideDashCooldown;
-
-                    ImGui::SliderFloat("Player Scale", &g_overridePlayerScale, 0.1f, 5.f);
-
-                    ImGui::EndTabItem();
+                    static float meleeDamage = ps->MeleeDA->Damage;
+                    if (ImGui::SliderFloat("Melee DMG", &meleeDamage, 50.f, 2000.f))
+                        ps->MeleeDA->Damage = meleeDamage;
                 }
 
-                if (ImGui::BeginTabItem("Combat"))
-                {
-                    static float overrideDamageMultiplier = ps->DamageMultiplier;
-                    if (ImGui::SliderFloat("Damage Multiplier", &overrideDamageMultiplier, 0.f, 10.f))
-                        ps->DamageMultiplier = overrideDamageMultiplier;
-
-                    static float overrideHealthMultiplier = ps->MaxHealthMultiplier;
-                    if (ImGui::SliderFloat("Health Multiplier", &overrideHealthMultiplier, 0.f, 10.f))
-                        ps->MaxHealthMultiplier = overrideHealthMultiplier;
-                    if (ps->WeaponDA)
-                    {
-                        static float overrideFireRate = ps->WeaponDA->BaseFireRate;
-                        if (ImGui::SliderFloat("Fire Rate", &overrideFireRate, 0.01f, 10.f))
-                            ps->WeaponDA->BaseFireRate = overrideFireRate;
-
-                        static float overrideVerticalRecoil = ps->WeaponDA->VerticalRecoil;
-                        if (ImGui::SliderFloat("Vertical Recoil", &overrideVerticalRecoil, 0.f, 50.f))
-                            ps->WeaponDA->VerticalRecoil = overrideVerticalRecoil;
-
-                        static float overrideHorizontalRecoil = ps->WeaponDA->HorizontalRecoil;
-                        if (ImGui::SliderFloat("Horizontal Recoil", &overrideHorizontalRecoil, 0.f, 50.f))
-                            ps->WeaponDA->HorizontalRecoil = overrideHorizontalRecoil;
-
-                        static float overrideRecoilInterp = ps->WeaponDA->RecoilInterpSpeed;
-                        if (ImGui::SliderFloat("Recoil Interp Speed", &overrideRecoilInterp, 0.f, 50.f))
-                            ps->WeaponDA->RecoilInterpSpeed = overrideRecoilInterp;
-
-                        static float overrideRecoveryInterp = ps->WeaponDA->RecoilRecoveryInterpSpeed;
-                        if (ImGui::SliderFloat("Recoil Recovery Speed", &overrideRecoveryInterp, 0.f, 50.f))
-                            ps->WeaponDA->RecoilRecoveryInterpSpeed = overrideRecoveryInterp;
-
-                        // --------- NEW: Melee Range Slider ----------
-                        if (ps->MeleeDA)
-                        {
-                            static float meleeRange = ps->MeleeDA->Range;
-                            if (ImGui::SliderFloat("Melee Range", &meleeRange, 50.f, 2000.f))
-                            {
-                                // Apply immediately
-                                ps->MeleeDA->Range = meleeRange;
-                            }
-                        }
-                        // --------- NEW: Melee DMG Slider ----------
-                        if (ps->MeleeDA)
-                        {
-                            static float meleeDamage = ps->MeleeDA->Damage;
-                            if (ImGui::SliderFloat("Melee DMG", &meleeDamage, 50.f, 2000.f))
-                            {
-                                // Apply immediately
-                                ps->MeleeDA->Damage = meleeDamage;
-                            }
-                        }
-                    }
-
-                    ImGui::EndTabItem();
-                }
-
-                ImGui::EndTabBar();
+                ImGui::EndTabItem();
             }
+
+            // ---------------- Misc Tab ----------------
+            if (ImGui::BeginTabItem("Misc"))
+            {
+                if (ImGui::Button("UNHOOK DLL", ImVec2(ImGui::GetContentRegionAvail().x, 25)))
+                    g_KillSwitch = TRUE;
+
+                if (ImGui::Button("DUMP OFFSETS", ImVec2(ImGui::GetContentRegionAvail().x, 25)))
+                    DumpLocalPlayerOffsets();
+
+                ImGui::EndTabItem();
+            }
+
+            ImGui::EndTabBar();
         }
 
         ImGui::End();
@@ -489,12 +535,18 @@ namespace DX11Base
             // Draw box
             ImGui::GetForegroundDrawList()->AddRect(tl, br, IM_COL32(255, 0, 0, 255), 0.0f, 0, 2.0f);
 
-            // Draw name
-            const char* name = actor->Class ? actor->Class->GetName().c_str() : "Enemy";
-            ImGui::GetForegroundDrawList()->AddText(ImVec2(tl.x, tl.y - 12.f), IM_COL32(255, 255, 255, 255), name);
+            // Draw proper enemy name
+            SDK::ACrabEnemyC* enemyPawn = static_cast<SDK::ACrabEnemyC*>(actor);
+            std::string enemyName = "Enemy";
+
+            if (enemyPawn)
+            {
+                enemyName = enemyPawn->EnemyName.ToString();
+            }
+
+            ImGui::GetForegroundDrawList()->AddText(ImVec2(tl.x, tl.y - 12.f), IM_COL32(255, 255, 255, 255), enemyName.c_str());
 
             // Draw health below box
-            SDK::ACrabEnemyC* enemyPawn = static_cast<SDK::ACrabEnemyC*>(actor);
             float health = 0.f, maxHealth = 0.f;
 
             if (enemyPawn && enemyPawn->PlayerState)
