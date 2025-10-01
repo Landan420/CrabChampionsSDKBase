@@ -345,34 +345,34 @@ namespace DX11Base
             if (ImGui::BeginTabItem("Movement"))
             {
                 static float overrideWalkSpeed = playerPawn->BaseWalkSpeed;
-                if (ImGui::SliderFloat("Base Walk Speed", &overrideWalkSpeed, 0.f, 3000.f))
+                if (ImGui::SliderFloat("Base Walk Speed", &overrideWalkSpeed, 0.f, 10000.f))
                     playerPawn->BaseWalkSpeed = overrideWalkSpeed;
 
                 static float overrideAirControl = playerPawn->AirControl;
-                if (ImGui::SliderFloat("Air Control", &overrideAirControl, 0.f, 5.f))
+                if (ImGui::SliderFloat("Air Control", &overrideAirControl, 0.f, 10000.f))
                     playerPawn->AirControl = overrideAirControl;
 
                 static float overrideFriction = playerPawn->GroundFriction;
-                if (ImGui::SliderFloat("Ground Friction", &overrideFriction, 0.f, 10.f))
+                if (ImGui::SliderFloat("Ground Friction", &overrideFriction, 0.f, 10000.f))
                     playerPawn->GroundFriction = overrideFriction;
 
                 static float overrideFlipHeight = player->FlipHeight;
-                if (ImGui::SliderFloat("Flip Height", &overrideFlipHeight, 0.f, 3000.f))
+                if (ImGui::SliderFloat("Flip Height", &overrideFlipHeight, 0.f, 10000.f))
                     player->FlipHeight = overrideFlipHeight;
 
                 static float overrideDashHeight = player->DashHeight;
-                if (ImGui::SliderFloat("Dash Height", &overrideDashHeight, 0.f, 3000.f))
+                if (ImGui::SliderFloat("Dash Height", &overrideDashHeight, 0.f, 10000.f))
                     player->DashHeight = overrideDashHeight;
 
                 static float overrideAcceleration = playerPawn->MaxAcceleration;
-                if (ImGui::SliderFloat("Max Acceleration", &overrideAcceleration, 0.f, 5000.f))
+                if (ImGui::SliderFloat("Max Acceleration", &overrideAcceleration, 0.f, 10000.f))
                     playerPawn->MaxAcceleration = overrideAcceleration;
 
                 static float overrideDashCooldown = player->BaseDashCooldown;
-                if (ImGui::SliderFloat("Dash Cooldown", &overrideDashCooldown, 0.f, 10.f))
+                if (ImGui::SliderFloat("Dash Cooldown", &overrideDashCooldown, 0.f, 10000.f))
                     player->BaseDashCooldown = overrideDashCooldown;
 
-                ImGui::SliderFloat("Player Scale", &g_overridePlayerScale, 0.1f, 5.f);
+                ImGui::SliderFloat("Player Scale", &g_overridePlayerScale, 0.1f, 10000.f);
 
                 ImGui::EndTabItem();
             }
@@ -381,56 +381,56 @@ namespace DX11Base
             if (ImGui::BeginTabItem("Combat"))
             {
                 static float overrideDamageMultiplier = ps->DamageMultiplier;
-                if (ImGui::SliderFloat("Damage Multiplier", &overrideDamageMultiplier, 0.f, 10.f))
+                if (ImGui::SliderFloat("Damage Multiplier", &overrideDamageMultiplier, 0.f, 10000.f))
                     ps->DamageMultiplier = overrideDamageMultiplier;
 
                 static float overrideHealthMultiplier = ps->MaxHealthMultiplier;
-                if (ImGui::SliderFloat("Health Multiplier", &overrideHealthMultiplier, 0.f, 10.f))
+                if (ImGui::SliderFloat("Health Multiplier", &overrideHealthMultiplier, 0.f, 10000.f))
                     ps->MaxHealthMultiplier = overrideHealthMultiplier;
 
                 if (ps->WeaponDA)
                 {
                     static float overrideFireRate = ps->WeaponDA->BaseFireRate;
-                    if (ImGui::SliderFloat("Fire Rate", &overrideFireRate, 0.01f, 10.f))
+                    if (ImGui::SliderFloat("Fire Rate", &overrideFireRate, 0.01f, 10000.f))
                         ps->WeaponDA->BaseFireRate = overrideFireRate;
 
                     static float overrideChamberDelay = ps->WeaponDA->PostFireClearChamberDelay;
-                    if (ImGui::SliderFloat("Chamber Delay", &overrideChamberDelay, 0.f, 5.f))
+                    if (ImGui::SliderFloat("Chamber Delay", &overrideChamberDelay, 0.f, 10000.f))
                         ps->WeaponDA->PostFireClearChamberDelay = overrideChamberDelay;
 
                     static float overrideBurstDelay = ps->WeaponDA->TimeBetweenBurstShots;
-                    if (ImGui::SliderFloat("Burst Shot Delay", &overrideBurstDelay, 0.f, 5.f))
+                    if (ImGui::SliderFloat("Burst Shot Delay", &overrideBurstDelay, 0.f, 10000.f))
                         ps->WeaponDA->TimeBetweenBurstShots = overrideBurstDelay;
                    
                     static float overrideReloadDuration = ps->WeaponDA->ReloadDuration;
-                    if (ImGui::SliderFloat("Reload Duration", &overrideReloadDuration, 0.f, 10.f))
+                    if (ImGui::SliderFloat("Reload Duration", &overrideReloadDuration, 0.f, 10000.f))
                         ps->WeaponDA->ReloadDuration = overrideReloadDuration;
 
                     static float overrideVerticalRecoil = ps->WeaponDA->VerticalRecoil;
-                    if (ImGui::SliderFloat("Vertical Recoil", &overrideVerticalRecoil, 0.f, 50.f))
+                    if (ImGui::SliderFloat("Vertical Recoil", &overrideVerticalRecoil, 0.f, 10000.f))
                         ps->WeaponDA->VerticalRecoil = overrideVerticalRecoil;
 
                     static float overrideHorizontalRecoil = ps->WeaponDA->HorizontalRecoil;
-                    if (ImGui::SliderFloat("Horizontal Recoil", &overrideHorizontalRecoil, 0.f, 50.f))
+                    if (ImGui::SliderFloat("Horizontal Recoil", &overrideHorizontalRecoil, 0.f, 10000.f))
                         ps->WeaponDA->HorizontalRecoil = overrideHorizontalRecoil;
 
                     static float overrideRecoilInterp = ps->WeaponDA->RecoilInterpSpeed;
-                    if (ImGui::SliderFloat("Recoil Interp Speed", &overrideRecoilInterp, 0.f, 50.f))
+                    if (ImGui::SliderFloat("Recoil Interp Speed", &overrideRecoilInterp, 0.f, 10000.f))
                         ps->WeaponDA->RecoilInterpSpeed = overrideRecoilInterp;
 
                     static float overrideRecoveryInterp = ps->WeaponDA->RecoilRecoveryInterpSpeed;
-                    if (ImGui::SliderFloat("Recoil Recovery Speed", &overrideRecoveryInterp, 0.f, 50.f))
+                    if (ImGui::SliderFloat("Recoil Recovery Speed", &overrideRecoveryInterp, 0.f, 10000.f))
                         ps->WeaponDA->RecoilRecoveryInterpSpeed = overrideRecoveryInterp;
                 }
 
                 if (ps->MeleeDA)
                 {
                     static float meleeRange = ps->MeleeDA->Range;
-                    if (ImGui::SliderFloat("Melee Range", &meleeRange, 50.f, 2000.f))
+                    if (ImGui::SliderFloat("Melee Range", &meleeRange, 50.f, 10000.f))
                         ps->MeleeDA->Range = meleeRange;
 
                     static float meleeDamage = ps->MeleeDA->Damage;
-                    if (ImGui::SliderFloat("Melee DMG", &meleeDamage, 50.f, 2000.f))
+                    if (ImGui::SliderFloat("Melee DMG", &meleeDamage, 50.f, 10000.f))
                         ps->MeleeDA->Damage = meleeDamage;
                 }
 
